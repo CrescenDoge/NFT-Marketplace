@@ -56,3 +56,40 @@ Moralis.Cloud.define("getUserItems", async (request) => {
       }
     }
   });
+
+//fetching all items for sale 
+Moralis.Cloud.define("getItems", async (request) => {
+
+    const query = new Moralis.Query("itemsForSale"); //look at NFTs for sale
+    query.notEqualTo("isSold", true); //makes sure item is not sold
+  
+  	if (request.user) { //if user is logged in
+    	query.notContainedIn("token.owner_of", request.user.attributes.accounts); //don't show users items for sale
+    }
+  	
+  	query.select("uid", "tokenAddress", "tokenId", "askingPrice", "token.token_uri", "token.symbol", "token.owner_of", "user.username", "user.avatar");
+  
+    const queryResults = await query.find({useMasterKey:true}); //put results into variable once found
+    const results = []; //display results as array
+    
+  	for (let i = 0; i < queryResults.length; ++i) {
+      
+      if(!queryResults[i].attributes.token || !queryResults[i].attributes.user) continue; //if no token or user is set, skip item in query
+      
+      results.push({
+        "uid": queryResults[i].attributes.uid,
+        "tokenId": queryResults[i].attributes.tokenId,
+        "tokenAddress": queryResults[i].attributes.tokenAddress,
+        "askingPrice": queryResults[i].attributes.askingPrice,
+  
+        "symbol": queryResults[i].attributes.token.attributes.symbol,
+        "tokenUri": queryResults[i].attributes.token.attributes.token_uri,
+        "ownerOf": queryResults[i].attributes.token.attributes.owner_of,
+        "tokenObjectId": queryResults[i].attributes.token.id,
+        
+        "sellerUsername": queryResults[i].attributes.user.attributes.username,
+        "sellerAvatar": queryResults[i].attributes.user.attributes.avatar,
+      });
+    }
+    return results;
+  });
